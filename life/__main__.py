@@ -1,5 +1,7 @@
 import pygame
 import sys
+import random
+from copy import deepcopy
 from button import Button
 from cell import Cell
 
@@ -38,15 +40,8 @@ game_back_button = Button(
     on_click=print_test,
 )
 
-cells = [
-    [Cell(False), Cell(False), Cell(False), Cell(False), Cell(False)],
-    [Cell(False), Cell(False), Cell(False), Cell(False), Cell(False)],
-    [Cell(False), Cell(False), Cell(True), Cell(False), Cell(False)],
-    [Cell(False), Cell(False), Cell(True), Cell(False), Cell(False)],
-    [Cell(False), Cell(False), Cell(True), Cell(False), Cell(False)],
-    [Cell(False), Cell(False), Cell(False), Cell(False), Cell(False)],
-    [Cell(False), Cell(False), Cell(False), Cell(False), Cell(False)],
-]
+cells = [[Cell(random.choice([False, False, False, True])) for _ in range(int(width / cell_width))] for _ in range(int(height / cell_width))]
+
 board_width, board_height = len(cells[0]), len(cells)
 
 # Game loop
@@ -79,43 +74,33 @@ while True:
                         ],
                     )
 
+        new_cells = deepcopy(cells)
         for (row_idx, row) in enumerate(cells):
             for (col_idx, val) in enumerate(row):
                 surrounding = 0
-                print(f"{{({row_idx}, {col_idx}) -- ", end="")
-                for row_delta in [board_height-1, 0, 1]:
-                    for col_delta in [board_width-1, 0, 1]:
+                for row_delta in [board_height - 1, 0, 1]:
+                    for col_delta in [board_width - 1, 0, 1]:
                         if row_delta == 0 and col_delta == 0:
                             continue
-                        changed_row = row_idx + row_delta
-                        changed_col = col_idx + col_delta
-                        if row_delta != 0:
-                            changed_row %= board_height
-                        if col_delta != 0:
-                            changed_col %= board_width
-                        
-                        if cells[changed_row][changed_col].is_alive():
-                            surrounding += 1
-                print(" --- }", surrounding, end="  ")
-                if (surrounding == 2 or surrounding == 3) and cells[row_idx][
+                        changed_row = (row_idx + row_delta) % board_height
+                        changed_col = (col_idx + col_delta) % board_width
+                        surrounding += int(cells[changed_row][changed_col].is_alive())
+                if (surrounding == 2 or surrounding == 3) and new_cells[row_idx][
                     col_idx
                 ].is_alive():
-                    cells[row_idx][col_idx].set_alive(True)
-                elif surrounding == 3 and not cells[row_idx][
-                    col_idx
-                ].is_alive():
-                    cells[row_idx][col_idx].set_alive(True)
+                    new_cells[row_idx][col_idx].set_alive(True)
+                elif surrounding == 3 and not new_cells[row_idx][col_idx].is_alive():
+                    new_cells[row_idx][col_idx].set_alive(True)
                 else:
-                    cells[row_idx][col_idx].set_alive(False)
+                    new_cells[row_idx][col_idx].set_alive(False)
 
-            print()
-        print()
+        cells = new_cells
 
         # Updating the display
         pygame.display.update()
 
         # Delay to save system resources
-        pygame.time.wait(500)
+        #pygame.time.wait(10)
 
     # Transition loop
     while play == 1:
