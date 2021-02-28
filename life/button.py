@@ -32,6 +32,10 @@ class Button:
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
         self.padding = padding
 
+    def set_width(self, width: int):
+        self.width = width
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+
     def draw(self, screen, outline=None):
         # Call this method to draw the button on the screen
         if outline:
