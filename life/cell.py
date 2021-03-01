@@ -1,5 +1,6 @@
 class Cell:
-    def __init__(self, alive: bool):
+    def __init__(self, alive: bool, color=None):
+        self.color = color
         self._alive = alive
 
     def is_alive(self):

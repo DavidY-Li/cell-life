@@ -25,10 +25,10 @@ class Board:
     def draw(self, screen):
         for (row_idx, row) in enumerate(self.cells):
             for (col_idx, val) in enumerate(row):
-                if self.cells[row_idx][col_idx].is_alive():
+                if val.is_alive():
                     pygame.draw.rect(
                         screen,
-                        colors.black,
+                        val.color,
                         [
                             col_idx * self.cell_width,
                             row_idx * self.cell_width,
@@ -58,7 +58,7 @@ class Board:
             (col, row) = (x // self.cell_width), (y // self.cell_width)
             self.clicked_cell = self.cells[row][col]
             self.delete = self.clicked_cell.is_alive()
-            self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+            self.clicked_cell.set_alive(not self.clicked_cell.is_alive())            
             self.mouse_down = True
         if event.type == pygame.MOUSEBUTTONUP:
             self.mouse_down = False
