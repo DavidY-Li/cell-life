@@ -1,5 +1,8 @@
+import random
+import colors
+
 class Cell:
-    def __init__(self, alive: bool, color=None):
+    def __init__(self, alive: bool, color):
         self.color = color
         self._alive = alive
 
