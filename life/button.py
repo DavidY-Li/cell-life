@@ -1,6 +1,8 @@
 import pygame
 
 # Button class for easier generation of buttons
+
+
 class Button:
     def __init__(
         self,

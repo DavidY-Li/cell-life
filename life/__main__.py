@@ -21,14 +21,15 @@ play = 0
 
 generation = 0
 
+max_generation = 500
 
 def menu():
     global generation
     global play
     play = 0
     generation = 0
-    board.clear_board()
-    if board.playing == True:
+    board.red = 0
+    if board.playing:
         board.toggle_pause()
 
 
@@ -40,22 +41,37 @@ board = Board(
 
 def toggle_pause():
     board.toggle_pause()
+    if board.playing:
+        board.reset()
 
 
 def clear_board():
     global generation
     generation = 0
+    board.red = 0
     board.clear_board()
     board.playing = False
 
 
 def playground():
     global play
-    play = 1
+    board.clear_board()
+    play = 2
+
 
 def multiplayer():
     global play
-    play = 2
+    board.clear_board()
+    board.red = 0
+    play = 1
+
+
+def reset():
+    global generation
+    board.load_reset()
+    board.playing = False
+    generation = 0
+
 
 game_back_button = Button(
     colors.red,
@@ -73,7 +89,7 @@ game_back_button = Button(
 pause_button = Button(
     colors.blue,
     colors.light_blue,
-    220,
+    340,
     10,
     110,
     35,
@@ -123,6 +139,19 @@ multiplayer_button = Button(
     on_click=multiplayer,
 )
 
+reset_button = Button(
+    colors.red,
+    colors.light_red,
+    220,
+    10,
+    110,
+    35,
+    "Reset",
+    font=30,
+    padding=0,
+    on_click=reset,
+)
+
 # Game loop
 while True:
 
@@ -156,14 +185,7 @@ while True:
 
     while play == 1:
         if board.playing:
-            pause_button.text = "Pause"
-            pause_button.set_width(120)
             generation += 1
-            title_rect = title_text.get_rect(center=(680, 65))
-        else:
-            pause_button.text = "Play"
-            pause_button.set_width(75)
-            title_rect = title_text.get_rect(center=(635, 65))
 
         # Checking for user input
         for event in pygame.event.get():
@@ -172,22 +194,54 @@ while True:
                 sys.exit()
 
             game_back_button.handle_event(event)
-            pause_button.handle_event(event)
-            clear_button.handle_event(event)
-            board.handle_event(event)
+            if generation != 500:
+                board.handle_event(event)
+
+        if generation == 99:
+            board.playing = False
+            generation += 1
+
+        if generation == 199:
+            board.playing = False
+            generation += 1
+
+        if generation == 299:
+            board.playing = False
+            generation += 1
+
+        if generation == 399:
+            board.playing = False
+            generation += 1
+
+        if generation == max_generation:
+            board.playing = False
 
         screen.fill(colors.white)
 
         board.draw(screen)
 
         game_back_button.draw(screen)
-        pause_button.draw(screen)
-        clear_button.draw(screen)
 
+        title_rect = title_text.get_rect(center=(435, 65))
         generation_rect = pygame.font.Font("pixel.ttf", 30).render(
             "Generation: " + str(generation), 1, colors.black
         )
         screen.blit(generation_rect, title_rect)
+
+        if not board.playing and generation < max_generation:
+            if board.red < 10:
+                turn = pygame.font.Font("pixel.ttf", 30).render(
+                    "Red Turn", 1, colors.red
+                )
+                turn_rect = turn.get_rect(center=(80, 700))
+                screen.blit(turn, turn_rect)
+
+            else:
+                turn = pygame.font.Font("pixel.ttf", 30).render(
+                    "Blue Turn", 1, colors.blue
+                )
+                turn_rect = turn.get_rect(center=(80, 700))
+                screen.blit(turn, turn_rect)
 
         board.next_step()
 
@@ -202,11 +256,11 @@ while True:
             pause_button.text = "Pause"
             pause_button.set_width(120)
             generation += 1
-            title_rect = title_text.get_rect(center=(680, 65))
+            title_rect = title_text.get_rect(center=(800, 65))
         else:
             pause_button.text = "Play"
             pause_button.set_width(75)
-            title_rect = title_text.get_rect(center=(635, 65))
+            title_rect = title_text.get_rect(center=(755, 65))
 
         # Checking for user input
         for event in pygame.event.get():
@@ -218,6 +272,7 @@ while True:
             pause_button.handle_event(event)
             clear_button.handle_event(event)
             board.handle_event(event)
+            reset_button.handle_event(event)
 
         screen.fill(colors.white)
 
@@ -226,6 +281,7 @@ while True:
         game_back_button.draw(screen)
         pause_button.draw(screen)
         clear_button.draw(screen)
+        reset_button.draw(screen)
 
         generation_rect = pygame.font.Font("pixel.ttf", 30).render(
             "Generation: " + str(generation), 1, colors.black

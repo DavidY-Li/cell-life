@@ -1,6 +1,7 @@
 import random
 import colors
 
+
 class Cell:
     def __init__(self, alive: bool, color):
         self.color = color
