@@ -24,6 +24,7 @@ class Board:
         self.previous = None
         self.red = 0
         self.saved_copy = []
+        self.winner_color = ""
 
     # Toggles pause
     def toggle_pause(self):
@@ -52,16 +53,22 @@ class Board:
             if x % 5 == 0:
                 thickness = 2
             pygame.draw.line(
-                screen, colors.grey, (0, x * self.cell_width), (self.width,
-                                                                x * self.cell_width), thickness
+                screen,
+                colors.grey,
+                (0, x * self.cell_width),
+                (self.width, x * self.cell_width),
+                thickness,
             )
         for y in range(self.width // self.cell_width):
             thickness = 1
             if y % 5 == 0:
                 thickness = 2
             pygame.draw.line(
-                screen, colors.grey, (y * self.cell_width, 0), (y *
-                                                                self.cell_width, self.height), thickness
+                screen,
+                colors.grey,
+                (y * self.cell_width, 0),
+                (y * self.cell_width, self.height),
+                thickness,
             )
 
     # Handles user input
@@ -72,16 +79,33 @@ class Board:
             (col, row) = (x // self.cell_width), (y // self.cell_width)
             self.clicked_cell = self.cells[row][col]
             self.delete = self.clicked_cell.is_alive()
-            self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
-            if self.red < 10 and not self.playing:
+
+            if (
+                self.clicked_cell.is_alive()
+                and (self.clicked_cell.color == colors.red and self.red < 15 and self.clicked_cell.color != colors.blue)
+                or (
+                    self.clicked_cell.color == colors.blue
+                    and self.red > 15
+                    and self.clicked_cell.color != colors.red
+                )
+            ):
+                self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+                self.red -= 1
+            elif not self.clicked_cell.is_alive() and self.clicked_cell.color == colors.white:
+                self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+
+            if self.red < 15 and not self.playing and self.clicked_cell.is_alive() and self.clicked_cell.color != colors.blue:
+                print(self.clicked_cell.color)
+
                 self.clicked_cell.color = colors.red
                 self.red += 1
-            elif self.red < 20 and not self.playing:
+            elif self.red > 15 and not self.playing and self.clicked_cell.is_alive() and self.clicked_cell.color != colors.red:
                 self.clicked_cell.color = colors.blue
                 self.red += 1
-                if self.red == 20:
+                if self.red == 25:
                     self.red = 0
                     self.playing = True
+
             self.mouse_down = True
             self.previous = (col, row)
         # Changes mouse state to unpressed after mouse button is unclicked
@@ -94,14 +118,35 @@ class Board:
                 (col, row) = (x // self.cell_width), (y // self.cell_width)
                 if (col, row) != self.previous:
                     self.clicked_cell = self.cells[row][col]
-                    self.clicked_cell.set_alive(not self.delete)
-                    if self.red < 10 and self.clicked_cell.color == colors.white:
+                    if (
+                        self.clicked_cell.is_alive()
+                        and self.delete
+                        and (self.clicked_cell.color == colors.red and self.red < 15)
+                        or (
+                            self.clicked_cell.color == colors.blue
+                            and self.red < 25
+                            and self.red > 15
+                        )
+                    ):
+                        self.clicked_cell.set_alive(not self.delete)
+                        self.red -= 1
+                    elif not self.clicked_cell.is_alive() and self.clicked_cell.color == colors.white:
+                        self.clicked_cell.set_alive(not self.delete)
+                    if (
+                        self.red < 15
+                        and self.clicked_cell.color == colors.white
+                        and not self.delete
+                    ):
                         self.clicked_cell.color = colors.red
                         self.red += 1
-                    elif self.red < 20 and self.clicked_cell.color == colors.white:
+                    elif (
+                        self.red < 25
+                        and self.clicked_cell.color == colors.white
+                        and not self.delete
+                    ):
                         self.clicked_cell.color = colors.blue
                         self.red += 1
-                        if self.red == 20:
+                        if self.red == 25:
                             self.red = 0
                             self.playing = True
                     self.previous = (col, row)
@@ -120,10 +165,8 @@ class Board:
                         for col_delta in [self.board_width - 1, 0, 1]:
                             if row_delta == 0 and col_delta == 0:
                                 continue
-                            changed_row = (
-                                row_idx + row_delta) % self.board_height
-                            changed_col = (
-                                col_idx + col_delta) % self.board_width
+                            changed_row = (row_idx + row_delta) % self.board_height
+                            changed_col = (col_idx + col_delta) % self.board_width
                             surrounding += int(
                                 self.cells[changed_row][changed_col].is_alive()
                             )
@@ -137,8 +180,7 @@ class Board:
                         new_cells[row_idx][col_idx].set_alive(True)
                     # Any dead cell with three "neighbours" becomes alive
                     elif (
-                        surrounding == 3 and not new_cells[row_idx][col_idx].is_alive(
-                        )
+                        surrounding == 3 and not new_cells[row_idx][col_idx].is_alive()
                     ):
                         new_cells[row_idx][col_idx].set_alive(True)
                         if red_surrounding > (surrounding / 2):
@@ -147,7 +189,8 @@ class Board:
                             new_cells[row_idx][col_idx].color = colors.blue
                         else:
                             new_cells[row_idx][col_idx].color = random.choice(
-                                [colors.blue])
+                                [colors.blue]
+                            )
                     # All other cells die
                     else:
                         new_cells[row_idx][col_idx].set_alive(False)
@@ -167,3 +210,19 @@ class Board:
     def load_reset(self):
         if len(self.saved_copy) > 0:
             self.cells = self.saved_copy
+
+    def winner(self):
+        red = 0
+        blue = 0
+        for row in self.cells:
+            for val in row:
+                if val.color == colors.red:
+                    red += 1
+                if val.color == colors.blue:
+                    blue += 1
+        if red < blue:
+            self.winner_color = "Blue Wins!"
+        elif red > blue:
+            self.winner_color = "Red Wins!"
+        else:
+            self.winner_color = "Tie"

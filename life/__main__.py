@@ -13,7 +13,7 @@ size = [width, height]
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("Game of Life")
 
-icon = pygame.image.load('glider.png')
+icon = pygame.image.load("glider.png")
 
 pygame.display.set_icon(icon)
 
@@ -23,20 +23,22 @@ generation = 0
 
 max_generation = 500
 
+interval = 100
+
+
 def menu():
     global generation
     global play
+    global interval
     play = 0
+    interval = 100
     generation = 0
     board.red = 0
     if board.playing:
         board.toggle_pause()
 
 
-board = Board(
-    width,
-    height
-)
+board = Board(width, height)
 
 
 def toggle_pause():
@@ -71,6 +73,11 @@ def reset():
     board.load_reset()
     board.playing = False
     generation = 0
+
+
+def show_help():
+    global play
+    play = 3
 
 
 game_back_button = Button(
@@ -152,6 +159,20 @@ reset_button = Button(
     on_click=reset,
 )
 
+help_button = Button(
+    colors.red,
+    colors.light_red,
+    10,
+    10,
+    110,
+    35,
+    "Rules",
+    font=30,
+    padding=0,
+    on_click=show_help,
+)
+
+
 # Game loop
 while True:
 
@@ -165,6 +186,7 @@ while True:
                 sys.exit()
             playground_button.handle_event(event)
             multiplayer_button.handle_event(event)
+            help_button.handle_event(event)
 
         screen.fill(colors.white)
 
@@ -176,6 +198,7 @@ while True:
 
         playground_button.draw(screen)
         multiplayer_button.draw(screen)
+        help_button.draw(screen)
 
         # Updating the display
         pygame.display.update()
@@ -183,6 +206,7 @@ while True:
         # Delay to save system resources
         pygame.time.wait(0)
 
+    # Multiplayer
     while play == 1:
         if board.playing:
             generation += 1
@@ -197,28 +221,32 @@ while True:
             if generation != 500:
                 board.handle_event(event)
 
-        if generation == 99:
-            board.playing = False
-            generation += 1
-
-        if generation == 199:
-            board.playing = False
-            generation += 1
-
-        if generation == 299:
-            board.playing = False
-            generation += 1
-
-        if generation == 399:
-            board.playing = False
-            generation += 1
-
-        if generation == max_generation:
-            board.playing = False
-
         screen.fill(colors.white)
 
         board.draw(screen)
+
+        if generation == interval - 1:
+            board.playing = False
+            generation += 1
+            interval += 100
+
+        if generation == max_generation:
+            board.playing = False
+            board.winner()
+            if board.winner_color in "Red Wins!":
+                winner = pygame.font.Font("pixel.ttf", 100).render(
+                    board.winner_color, 1, colors.red
+                )
+            elif board.winner_color in "Blue Wins!":
+                winner = pygame.font.Font("pixel.ttf", 100).render(
+                    board.winner_color, 1, colors.blue
+                )
+            else:
+                winner = pygame.font.Font("pixel.ttf", 100).render(
+                    board.winner_color, 1, colors.black
+                )
+            winner_rect = winner.get_rect(center=(width / 2, 350))
+            screen.blit(winner, winner_rect)
 
         game_back_button.draw(screen)
 
@@ -229,18 +257,18 @@ while True:
         screen.blit(generation_rect, title_rect)
 
         if not board.playing and generation < max_generation:
-            if board.red < 10:
+            if board.red < 15:
                 turn = pygame.font.Font("pixel.ttf", 30).render(
-                    "Red Turn", 1, colors.red
+                    "Red Turn: " + str(15 - board.red) + " Cells Left", 1, colors.red
                 )
-                turn_rect = turn.get_rect(center=(80, 700))
+                turn_rect = turn.get_rect(center=(180, 700))
                 screen.blit(turn, turn_rect)
 
             else:
                 turn = pygame.font.Font("pixel.ttf", 30).render(
-                    "Blue Turn", 1, colors.blue
+                    "Blue Turn: " + str(25 - board.red) + " Cells Left", 1, colors.blue
                 )
-                turn_rect = turn.get_rect(center=(80, 700))
+                turn_rect = turn.get_rect(center=(180, 700))
                 screen.blit(turn, turn_rect)
 
         board.next_step()
@@ -251,6 +279,7 @@ while True:
         # Delay to save system resources
         pygame.time.wait(0)
 
+    # Single player
     while play == 2:
         if board.playing:
             pause_button.text = "Pause"
@@ -289,6 +318,59 @@ while True:
         screen.blit(generation_rect, title_rect)
 
         board.next_step()
+
+        # Updating the display
+        pygame.display.update()
+
+        # Delay to save system resources
+        pygame.time.wait(0)
+
+    # Game info
+    while play == 3:
+        # Checking for user input
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            game_back_button.handle_event(event)
+
+        screen.fill(colors.white)
+
+        game_back_button.draw(screen)
+
+        rules = pygame.font.Font("pixel.ttf", 100).render("Rules", 1, colors.black)
+        rules_rect = rules.get_rect(center=(width / 2, 65))
+        screen.blit(rules, rules_rect)
+
+        rule1 = pygame.font.Font("pixel.ttf", 40).render("The Game of Life is different from any other game.", 1, colors.black)
+        rule1_rect = rule1.get_rect(center=(width / 2, 135))
+        screen.blit(rule1, rule1_rect)
+
+        rule2 = pygame.font.Font("pixel.ttf", 40).render(" It is a game made of four simple rules and capable of", 1, colors.black)
+        rule2_rect = rule2.get_rect(center=(width / 2, 180))
+        screen.blit(rule2, rule2_rect)
+
+        rule3 = pygame.font.Font("pixel.ttf", 40).render("simulating a Turing Machine. The rules are as follows:", 1, colors.black)
+        rule3_rect = rule3.get_rect(center=(width / 2, 235))
+        screen.blit(rule3, rule3_rect)
+
+        rule4 = pygame.font.Font("pixel.ttf", 28).render("1. Any live cell with fewer than two live neighbours dies, as if by underpopulation.", 1, colors.black)
+        rule4_rect = rule4.get_rect(center=(width / 2, 280))
+        screen.blit(rule4, rule4_rect)
+
+        rule5 = pygame.font.Font("pixel.ttf", 28).render("2. Any live cell with two or three live neighbours lives on to the next generation.", 1, colors.black)
+        rule5_rect = rule5.get_rect(center=(width / 2, 325))
+        screen.blit(rule5, rule5_rect)
+
+        rule6 = pygame.font.Font("pixel.ttf", 28).render("3. Any live cell with more than three live neighbours dies, as if by overpopulation.", 1, colors.black)
+        rule6_rect = rule6.get_rect(center=(width / 2, 370))
+        screen.blit(rule6, rule6_rect)
+
+        rule7 = pygame.font.Font("pixel.ttf", 28).render("4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.", 1, colors.black)
+        rule7_rect = rule7.get_rect(center=(width / 2, 415))
+        screen.blit(rule7, rule7_rect)
+
 
         # Updating the display
         pygame.display.update()
