@@ -3,10 +3,10 @@ from cell import Cell
 import colors
 from copy import deepcopy
 import random
+import colorsys
 
 
 class Board:
-
     # Initial attributes
     def __init__(self, width, height, playing=False, cell_width=20):
         self.cell_width = cell_width
@@ -22,9 +22,7 @@ class Board:
         self.mouse_down = False
         self.delete = False
         self.previous = None
-        self.red = 0
         self.saved_copy = []
-        self.winner_color = ""
 
     # Toggles pause
     def toggle_pause(self):
@@ -79,33 +77,7 @@ class Board:
             (col, row) = (x // self.cell_width), (y // self.cell_width)
             self.clicked_cell = self.cells[row][col]
             self.delete = self.clicked_cell.is_alive()
-
-            if (
-                self.clicked_cell.is_alive()
-                and (self.clicked_cell.color == colors.red and self.red < 15 and self.clicked_cell.color != colors.blue)
-                or (
-                    self.clicked_cell.color == colors.blue
-                    and self.red > 15
-                    and self.clicked_cell.color != colors.red
-                )
-            ):
-                self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
-                self.red -= 1
-            elif not self.clicked_cell.is_alive() and self.clicked_cell.color == colors.white:
-                self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
-
-            if self.red < 15 and not self.playing and self.clicked_cell.is_alive() and self.clicked_cell.color != colors.blue:
-                print(self.clicked_cell.color)
-
-                self.clicked_cell.color = colors.red
-                self.red += 1
-            elif self.red > 15 and not self.playing and self.clicked_cell.is_alive() and self.clicked_cell.color != colors.red:
-                self.clicked_cell.color = colors.blue
-                self.red += 1
-                if self.red == 25:
-                    self.red = 0
-                    self.playing = True
-
+            self.handle_click()
             self.mouse_down = True
             self.previous = (col, row)
         # Changes mouse state to unpressed after mouse button is unclicked
@@ -118,37 +90,7 @@ class Board:
                 (col, row) = (x // self.cell_width), (y // self.cell_width)
                 if (col, row) != self.previous:
                     self.clicked_cell = self.cells[row][col]
-                    if (
-                        self.clicked_cell.is_alive()
-                        and self.delete
-                        and (self.clicked_cell.color == colors.red and self.red < 15)
-                        or (
-                            self.clicked_cell.color == colors.blue
-                            and self.red < 25
-                            and self.red > 15
-                        )
-                    ):
-                        self.clicked_cell.set_alive(not self.delete)
-                        self.red -= 1
-                    elif not self.clicked_cell.is_alive() and self.clicked_cell.color == colors.white:
-                        self.clicked_cell.set_alive(not self.delete)
-                    if (
-                        self.red < 15
-                        and self.clicked_cell.color == colors.white
-                        and not self.delete
-                    ):
-                        self.clicked_cell.color = colors.red
-                        self.red += 1
-                    elif (
-                        self.red < 25
-                        and self.clicked_cell.color == colors.white
-                        and not self.delete
-                    ):
-                        self.clicked_cell.color = colors.blue
-                        self.red += 1
-                        if self.red == 25:
-                            self.red = 0
-                            self.playing = True
+                    self.handle_drag()
                     self.previous = (col, row)
 
     # Does next step of board
@@ -161,6 +103,7 @@ class Board:
                 for (col_idx, _) in enumerate(row):
                     surrounding = 0
                     red_surrounding = 0
+                    surrounding_color = []
                     for row_delta in [self.board_height - 1, 0, 1]:
                         for col_delta in [self.board_width - 1, 0, 1]:
                             if row_delta == 0 and col_delta == 0:
@@ -173,6 +116,10 @@ class Board:
                             red_surrounding += int(
                                 self.cells[changed_row][changed_col].color == colors.red
                             )
+                            if self.cells[changed_row][changed_col].is_alive():
+                                surrounding_color.append(
+                                    self.cells[changed_row][changed_col].color
+                                )
                     # Any cell with two or three "neighbours" stays alive
                     if (surrounding == 2 or surrounding == 3) and new_cells[row_idx][
                         col_idx
@@ -183,14 +130,14 @@ class Board:
                         surrounding == 3 and not new_cells[row_idx][col_idx].is_alive()
                     ):
                         new_cells[row_idx][col_idx].set_alive(True)
-                        if red_surrounding > (surrounding / 2):
-                            new_cells[row_idx][col_idx].color = colors.red
-                        elif red_surrounding < (surrounding / 2):
-                            new_cells[row_idx][col_idx].color = colors.blue
-                        else:
-                            new_cells[row_idx][col_idx].color = random.choice(
-                                [colors.blue]
-                            )
+                        self.set_new_color(
+                            red_surrounding,
+                            surrounding,
+                            new_cells,
+                            row_idx,
+                            col_idx,
+                            surrounding_color,
+                        )
                     # All other cells die
                     else:
                         new_cells[row_idx][col_idx].set_alive(False)
@@ -199,18 +146,27 @@ class Board:
             self.cells = new_cells
 
     # Clear board function
+    # The commented code prints a new preset when the clear button is pressed
     def clear_board(self):
         for row in self.cells:
+            # print("[", end="")
             for col in row:
+                # print(f'Cell({col.is_alive()}, {colors.black})', end=", ")
                 col.set_alive(False)
+                col.color = colors.white
+            # print("],")
+        # print("\n\n\n")
 
+    # Creates a save of current board
     def reset(self):
         self.saved_copy = deepcopy(self.cells)
 
+    # Loads previous board
     def load_reset(self):
         if len(self.saved_copy) > 0:
             self.cells = self.saved_copy
 
+    # Determines winner based on number of cells
     def winner(self):
         red = 0
         blue = 0
@@ -226,3 +182,210 @@ class Board:
             self.winner_color = "Red Wins!"
         else:
             self.winner_color = "Tie"
+
+    # Overrides default board methods
+    def handle_drag(self):
+        raise Exception("Default")
+
+    def handle_click(self):
+        raise Exception("Default")
+
+    def set_new_color(
+        self,
+        red_surrounding,
+        surrounding,
+        new_cells,
+        row_idx,
+        col_idx,
+        surrounding_color,
+    ):
+        raise Exception("Default")
+
+
+# Multiplayer board class that inherits from main board class
+class MultiplayerBoard(Board):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.red = 0
+        self.winner_color = ""
+
+    # Drag place method for multiplayer
+    def handle_drag(self):
+        if (
+            self.clicked_cell.is_alive()
+            and self.delete
+            and (
+                (
+                    self.clicked_cell.color == colors.red
+                    and self.red < 15
+                    and self.red > 0
+                )
+                or (self.clicked_cell.color == colors.blue and self.red > 15)
+            )
+        ):
+            self.clicked_cell.set_alive(not self.delete)
+            self.clicked_cell.color = colors.white
+            self.red -= 1
+        elif (
+            not self.clicked_cell.is_alive() and self.clicked_cell.color == colors.white
+        ):
+            self.clicked_cell.set_alive(not self.delete)
+
+        if (
+            self.red < 15
+            and not self.playing
+            and self.clicked_cell.color == colors.white
+            and not self.delete
+        ):
+            self.clicked_cell.color = colors.red
+            self.red += 1
+        elif (
+            self.red >= 15
+            and not self.playing
+            and self.clicked_cell.color == colors.white
+            and not self.delete
+        ):
+            self.clicked_cell.color = colors.blue
+            self.red += 1
+            if self.red == 25:
+                self.red = 0
+                self.playing = True
+
+    # Click place method for multiplayer
+    def handle_click(self):
+        if (
+            self.clicked_cell.is_alive()
+            and not self.playing
+            and (
+                (
+                    self.clicked_cell.color == colors.red
+                    and self.red < 15
+                    and self.red > 0
+                )
+                or (self.clicked_cell.color == colors.blue and self.red > 15)
+            )
+        ):
+            self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+            self.clicked_cell.color = colors.white
+            self.red -= 1
+        elif (
+            not self.clicked_cell.is_alive() and self.clicked_cell.color == colors.white
+        ):
+            self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+
+        if (
+            self.red < 15
+            and not self.playing
+            and self.clicked_cell.is_alive()
+            and self.clicked_cell.color == colors.white
+        ):
+            self.clicked_cell.color = colors.red
+            self.red += 1
+        elif (
+            self.red >= 15
+            and not self.playing
+            and self.clicked_cell.is_alive()
+            and self.clicked_cell.color == colors.white
+        ):
+            self.clicked_cell.color = colors.blue
+            self.red += 1
+            if self.red == 25:
+                self.red = 0
+                self.playing = True
+
+    # New color method
+    # Color of a new cell is the most common color of other cells around it
+    def set_new_color(
+        self,
+        red_surrounding,
+        surrounding,
+        new_cells,
+        row_idx,
+        col_idx,
+        surrounding_color,
+    ):
+        if red_surrounding > (surrounding / 2):
+            new_cells[row_idx][col_idx].color = colors.red
+        elif red_surrounding < (surrounding / 2):
+            new_cells[row_idx][col_idx].color = colors.blue
+        else:
+            new_cells[row_idx][col_idx].color = random.choice([colors.blue, colors.red])
+
+
+# Singleplayer board class that inherits from main board class
+class SingleplayerBoard(Board):
+    def __init__(self, *args, color=colors.black, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.color = color
+
+    # Drag place method for singleplayer
+    def handle_drag(self):
+        self.clicked_cell.set_alive(not self.delete)
+        self.clicked_cell.color = self.color
+
+    # Click place method for singleplayer
+    def handle_click(self):
+        self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+        self.clicked_cell.color = self.color
+
+    # New color method
+    # Color of new cells is always black
+    def set_new_color(
+        self,
+        red_surrounding,
+        surrounding,
+        new_cells,
+        row_idx,
+        col_idx,
+        surrounding_color,
+    ):
+        new_cells[row_idx][col_idx].color = self.color
+
+
+# Rainbow singleplayer board class that inherits from main board class
+class RainbowSingleplayerBoard(Board):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    # Drag place method for rainbow singleplayer
+    def handle_drag(self):
+        self.clicked_cell.set_alive(not self.delete)
+        self.clicked_cell.color = random.choice([colors.red, colors.green, colors.blue])
+
+    # Click place method for rainbow singleplayer
+    def handle_click(self):
+        self.clicked_cell.set_alive(not self.clicked_cell.is_alive())
+        self.clicked_cell.color = random.choice([colors.red, colors.green, colors.blue])
+
+    # New color method
+    # Color of new cells is based on average color of other cells around it
+    # The color is first converted to HSV in order to keep the color fully saturated
+    def set_new_color(
+        self,
+        red_surrounding,
+        surrounding,
+        new_cells,
+        row_idx,
+        col_idx,
+        surrounding_color,
+    ):
+        red_value = 0
+        green_value = 0
+        blue_value = 0
+        hsv_color = []
+
+        for color in surrounding_color:
+            red_value += color[0]
+        red_value /= len(surrounding_color)
+
+        for color in surrounding_color:
+            green_value += color[1]
+        green_value /= len(surrounding_color)
+
+        for color in surrounding_color:
+            blue_value += color[2]
+        blue_value /= len(surrounding_color)
+
+        hsv_color = colors.rgb_to_hsv(red_value, blue_value, green_value)
+
+        new_cells[row_idx][col_idx].color = colors.hsv_to_rgb(hsv_color[0], 1, 1)
