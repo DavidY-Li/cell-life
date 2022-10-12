@@ -9,6 +9,7 @@ import colorsys
 class Board:
     # Initial attributes
     def __init__(self, width, height, playing=False, cell_width=20):
+        """A board represents a Conway's game of life world."""
         self.cell_width = cell_width
         self.playing = playing
         self.cells = [
@@ -146,16 +147,11 @@ class Board:
             self.cells = new_cells
 
     # Clear board function
-    # The commented code prints a new preset when the clear button is pressed
     def clear_board(self):
         for row in self.cells:
-            # print("[", end="")
             for col in row:
-                # print(f'Cell({col.is_alive()}, {colors.black})', end=", ")
                 col.set_alive(False)
                 col.color = colors.white
-            # print("],")
-        # print("\n\n\n")
 
     # Creates a save of current board
     def reset(self):
